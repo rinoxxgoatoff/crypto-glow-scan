@@ -97,8 +97,10 @@ export const startSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { user } = await auth(data.initData, data.devTgId);
     const sb = await admin();
-    await sb.rpc("tg_set_updated_at"); // no-op safety; ignore if errors
-    await sb.from("tg_users").update({ sessions: (await sb.from("tg_users").select("sessions").eq("tg_id", user.id).single()).data?.sessions! + 1, last_seen: new Date().toISOString() }).eq("tg_id", user.id);
+    const { data: u } = await sb.from("tg_users").select("sessions").eq("tg_id", user.id).single();
+    await sb.from("tg_users")
+      .update({ sessions: (u?.sessions ?? 0) + 1, last_seen: new Date().toISOString() })
+      .eq("tg_id", user.id);
     return { ok: true };
   });
 
@@ -128,16 +130,13 @@ export const addReward = createServerFn({ method: "POST" })
       sb.from("tg_history").insert({
         tg_id: user.id, sym: data.sym, amount: data.amount, usd: data.usd, kind: "mining",
       }),
-      sb.rpc("tg_increment_earned", { _tg_id: user.id, _usd: data.usd }).then(async (r) => {
-        if (r.error) {
-          // fallback if RPC missing
-          const { data: u } = await sb.from("tg_users").select("earned_usd").eq("tg_id", user.id).single();
-          await sb.from("tg_users").update({
-            earned_usd: Number(u?.earned_usd ?? 0) + data.usd,
-            last_seen: new Date().toISOString(),
-          }).eq("tg_id", user.id);
-        }
-      }),
+      (async () => {
+        const { data: u } = await sb.from("tg_users").select("earned_usd").eq("tg_id", user.id).single();
+        await sb.from("tg_users").update({
+          earned_usd: Number(u?.earned_usd ?? 0) + data.usd,
+          last_seen: new Date().toISOString(),
+        }).eq("tg_id", user.id);
+      })(),
     ]);
     return { ok: true, newAmount };
   });
