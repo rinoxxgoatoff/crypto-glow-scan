@@ -1,67 +1,63 @@
 ## Objectif
-Transformer le mockup HTML "Scanner Crypto" en vraie app TanStack Start modulaire, avec un design retravaillé et des fonctionnalités étendues.
+Transformer Scanner Crypto en app multi-utilisateurs : chaque compte Telegram a sa propre balance/historique côté serveur, un panneau admin réservé au chat_id `7808474075`, et les vrais logos crypto partout.
 
-## 1. Architecture (port React/TanStack)
-Découper le monolithe HTML en routes + composants typés :
+## 1. Activer Lovable Cloud
+Tables Postgres (toutes avec RLS + `GRANT` explicite) :
 
 ```text
-src/routes/
-  __root.tsx              -> shell + TopBar + BottomNav + Toaster
-  index.tsx               -> Home (Daily Bonus + Scanner + Balances)
-  miner.tsx               -> Mining Rig (shop / active)
-  swap.tsx                -> Swap tokens
-  profile.tsx             -> Profil + stats
+tg_users
+  tg_id BIGINT PRIMARY KEY        -- chat_id Telegram
+  username, first_name, last_name, photo_url
+  has_miner BOOLEAN
+  bonus_day INT, last_bonus DATE
+  earned_usd NUMERIC, sessions INT
+  created_at, last_seen
 
-src/components/scanner/
-  TopBar, BottomNav, DailyBonus, ScannerTerminal,
-  TokenList, TokenRow, MinerShop, MinerActive,
-  SwapBox, ProfileCard, WithdrawSheet, ContactSheet
+tg_balances
+  tg_id BIGINT, sym TEXT, amount NUMERIC
+  PRIMARY KEY (tg_id, sym)
 
-src/lib/scanner/
-  state.ts        -> Zustand store persisté (remplace localStorage brut)
-  coins.ts        -> catalogue COINS / prix / icônes
-  mining.ts       -> hook useMining (logs, rewards, MH/s flicker)
-  format.ts       -> fa(), fu(), p2()
+tg_history (50 dernières récompenses / user)
+  id, tg_id, ts, sym, amount, usd
+
+user_roles            -- pattern Lovable standard
+  user_id (= tg_id::text), role app_role
 ```
 
-État géré via **Zustand + persist** (clé `sc_v6`) au lieu du localStorage manuel — migration auto depuis `sc_v5` si présent.
+RLS : un user ne voit que ses lignes (`tg_id = current_setting('app.tg_id')::bigint`). L'admin (`has_role('admin')`) voit tout. Le `tg_id` est posé par le server-fn après vérification.
 
-## 2. Design system
-Refondre `src/styles.css` avec tokens oklch dédiés (vert mining `--mint`, violet streak, dégradés, ombres glow, mono `JetBrains Mono`, sans `Inter`). Plus aucune couleur hardcodée dans les composants — variants Shadcn (`button` : `mine`, `stop`, `ghost-mint` ; `card` : `glow`).
+## 2. Auth Telegram WebApp
+- Frontend : `window.Telegram.WebApp.initData` envoyé à chaque server-fn.
+- Server-fn `verifyTelegramAuth` : recalcule le HMAC SHA-256 d'`initData` avec le `TELEGRAM_BOT_TOKEN` (secret), extrait `user.id`, upsert dans `tg_users`. Renvoie un JWT signé `{ tg_id, is_admin }` stocké côté client.
+- Toutes les server-fn protégées prennent ce JWT, posent `app.tg_id` via RPC `set_tg_context(tg_id)` avant les requêtes Supabase (service role + RLS forcé par contexte).
+- Chat_id admin **`7808474075`** seedé en migration avec role `admin`.
 
-Améliorations visuelles vs mockup :
-- typo plus serrée, hiérarchie clarifiée
-- terminal avec scan-line subtile + glow animé pendant mining
-- token rows avec micro-graphique sparkline 24h (mock)
-- bottom-nav indicateur actif animé (pill qui glisse)
-- haptic-like micro-animations (framer-motion) sur claim / reward / swap
-- responsive propre (pas figé à 430px max)
+## 3. Refonte state
+- `useScanner` (zustand local) → `useUser`/`useBalances`/`useHistory` via TanStack Query branchés sur server-fn (`getMe`, `getBalances`, `getHistory`, `addReward`, `claimBonus`, `swap`, `buyMiner`, `withdraw`).
+- Mining tick déclenche `addReward` côté serveur (au lieu d'`addReward` local). Optimistic update pour rester fluide.
+- Fallback "dev hors Telegram" : bouton mock-login chat_id local (uniquement si `import.meta.env.DEV`).
 
-## 3. Nouvelles features
-- **Historique de mining** : page/section listant les rewards reçus (timestamp, coin, montant USD)
-- **Sparklines** sur chaque token (prix mock 7j)
-- **Swap réel côté state** : débite le from / crédite le to selon le taux (au lieu d'un simple toast)
-- **Notifications toasts** unifiées via `sonner`
-- **Streak bonus** : réinitialise si > 1 jour manqué, +bonus visuel jour 7
-- **Withdraw flow** : sheet shadcn avec champ adresse + validation min $10 + gate "buy miner"
-- **Settings discrètes** : reset démo, langue FR/EN (i18n light via objet)
-- **Mining offline-catchup** : si l'utilisateur revient après X minutes en mining actif → calcul rétroactif plafonné
+## 4. Panneau admin `/admin`
+Route sous `_authenticated/` gardée par `has_role('admin')`. Server-fn `listUsers` (admin-only) renvoie :
+- chat_id, username, photo, has_miner, earned_usd, sessions, last_seen, total balance USD
+- table triable + recherche, badge "Miner payé"
+- détail user : balances par token + 20 dernières récompenses
+- KPIs en haut : nb users, % avec miner, total mined, sessions/24h
 
-## 4. SEO & meta
-- `head()` par route (titres + descriptions FR distincts)
-- favicon + og image générée (logo Scanner Crypto)
-- `robots.txt` + `sitemap.xml` selon recipe
+## 5. Vrais logos crypto (CoinGecko CDN)
+- `COINS[sym].logo` = URL CoinGecko (`https://assets.coingecko.com/coins/images/.../small/...png`)
+- `<TokenIcon sym={...} size={36} />` : `<img>` avec fallback lettre si erreur (`onError`)
+- Remplace tous les `<div>{icon}</div>` dans `TokenList`, `SwapBox`, `MinerActive`, history…
 
-## 5. Détails techniques
-- Pas de backend (Lovable Cloud non requis : tout reste client + persist). Si l'utilisateur veut auth Telegram/leaderboard plus tard → activer Cloud à ce moment.
-- Framer-motion (déjà dispo via tw-animate-css ou ajout `motion`) pour transitions.
-- Shadcn : `sheet`, `dialog`, `button`, `card`, `tabs`, `sonner` déjà présents → réutilisés.
-- Aucun appel réseau réel — données 100% mock, comme le mockup d'origine.
+## 6. Hors scope
+- Vrais paiements crypto on-chain (achat miner reste mock côté serveur).
+- i18n complète, leaderboard public, notifications push.
 
-## 6. Hors scope (à confirmer si tu veux)
-- Vrais paiements crypto / vérification on-chain
-- Backend / multi-device sync
-- Auth Telegram Mini App officielle (`window.Telegram.WebApp`)
-- Internationalisation complète (juste FR/EN basique prévu)
+## Détails techniques
+- Secret requis : `TELEGRAM_BOT_TOKEN` (je te le demanderai via add_secret après ton OK).
+- `src/integrations/telegram/verify.server.ts` : HMAC + parse initData.
+- `src/lib/scanner/api.functions.ts` : tous les server-fn (chacun appelle `verifyTelegramAuth` puis `supabaseAdmin` + `set_tg_context`).
+- Migration unique avec : enum `app_role`, tables, RLS, GRANTs, fonctions `has_role`/`set_tg_context`, seed admin.
+- TanStack Query côté client, loaders légers, `invalidateQueries` après mutations.
 
-Dis-moi si tu veux que j'ajoute un de ces points dans le scope avant que je code.
+Dis-moi si OK pour activer Cloud + me donner le bot token, ou si tu veux ajuster quelque chose (ex: plusieurs admins, autres KPIs, logos en SVG plutôt que PNG).
