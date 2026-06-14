@@ -3,16 +3,17 @@ import { toast } from "sonner";
 import { DAILY_TON, useScanner } from "@/lib/scanner/state";
 
 export function DailyBonus() {
-  const bonusDay = useScanner((s) => s.bonusDay);
-  const lastBonus = useScanner((s) => s.lastBonus);
+  const bonusDay = useScanner((s) => s.me?.bonus_day ?? 1);
+  const lastBonus = useScanner((s) => s.me?.last_bonus ?? null);
   const claim = useScanner((s) => s.claimBonus);
 
-  const today = new Date().toDateString();
+  const today = new Date().toISOString().slice(0, 10);
   const claimed = lastBonus === today;
 
-  const onClaim = () => {
-    const r = claim();
+  const onClaim = async () => {
+    const r = await claim();
     if (r) toast.success(`Bonus claimed: +${r.tonAmount} TON`);
+    else toast.error("Already claimed today");
   };
 
   return (

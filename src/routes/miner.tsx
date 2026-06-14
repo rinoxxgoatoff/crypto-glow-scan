@@ -15,7 +15,7 @@ export const Route = createFileRoute("/miner")({
 });
 
 function MinerPage() {
-  const hasMiner = useScanner((s) => s.hasMiner);
+  const hasMiner = useScanner((s) => s.me?.has_miner ?? false);
   const [contactOpen, setContactOpen] = useState(false);
 
   return (
