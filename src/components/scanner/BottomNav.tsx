@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Pickaxe, ArrowLeftRight, User } from "lucide-react";
+import { Home, Pickaxe, ArrowLeftRight, User, ShieldCheck } from "lucide-react";
+import { useScanner } from "@/lib/scanner/state";
 
-const items = [
+const baseItems = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/miner", label: "Miner", Icon: Pickaxe },
   { to: "/swap", label: "Swap", Icon: ArrowLeftRight },
@@ -10,6 +11,10 @@ const items = [
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdmin = useScanner((s) => s.me?.is_admin ?? false);
+  const items = isAdmin
+    ? [...baseItems, { to: "/admin", label: "Admin", Icon: ShieldCheck } as const]
+    : baseItems;
   return (
     <nav className="sticky bottom-0 z-40 flex border-t border-border bg-surface-1/95 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2 backdrop-blur-md">
       {items.map(({ to, label, Icon }) => {
