@@ -14,7 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tg_balances: {
+        Row: {
+          amount: number
+          sym: string
+          tg_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          sym: string
+          tg_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          sym?: string
+          tg_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tg_balances_tg_id_fkey"
+            columns: ["tg_id"]
+            isOneToOne: false
+            referencedRelation: "tg_users"
+            referencedColumns: ["tg_id"]
+          },
+        ]
+      }
+      tg_history: {
+        Row: {
+          amount: number
+          id: string
+          kind: string
+          sym: string
+          tg_id: number
+          ts: string
+          usd: number
+        }
+        Insert: {
+          amount: number
+          id?: string
+          kind?: string
+          sym: string
+          tg_id: number
+          ts?: string
+          usd: number
+        }
+        Update: {
+          amount?: number
+          id?: string
+          kind?: string
+          sym?: string
+          tg_id?: number
+          ts?: string
+          usd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tg_history_tg_id_fkey"
+            columns: ["tg_id"]
+            isOneToOne: false
+            referencedRelation: "tg_users"
+            referencedColumns: ["tg_id"]
+          },
+        ]
+      }
+      tg_users: {
+        Row: {
+          bonus_day: number
+          created_at: string
+          earned_usd: number
+          first_name: string | null
+          has_miner: boolean
+          language_code: string | null
+          last_bonus: string | null
+          last_name: string | null
+          last_seen: string
+          photo_url: string | null
+          sessions: number
+          tg_id: number
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          bonus_day?: number
+          created_at?: string
+          earned_usd?: number
+          first_name?: string | null
+          has_miner?: boolean
+          language_code?: string | null
+          last_bonus?: string | null
+          last_name?: string | null
+          last_seen?: string
+          photo_url?: string | null
+          sessions?: number
+          tg_id: number
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          bonus_day?: number
+          created_at?: string
+          earned_usd?: number
+          first_name?: string | null
+          has_miner?: boolean
+          language_code?: string | null
+          last_bonus?: string | null
+          last_name?: string | null
+          last_seen?: string
+          photo_url?: string | null
+          sessions?: number
+          tg_id?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
