@@ -17,10 +17,11 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const uid = useScanner((s) => s.uid);
-  const earned = useScanner((s) => s.earned);
-  const sessions = useScanner((s) => s.sessions);
-  const hasMiner = useScanner((s) => s.hasMiner);
+  const me = useScanner((s) => s.me);
+  const uid = String(me?.tg_id ?? "—");
+  const earned = me?.earned_usd ?? 0;
+  const sessions = me?.sessions ?? 0;
+  const hasMiner = me?.has_miner ?? false;
   const bal = useScanner((s) => s.bal);
   const reset = useScanner((s) => s.resetAll);
 
