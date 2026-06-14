@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function ScannerTerminal({ mining, lines, hashRate, base, onToggle }: Props) {
-  const earned = useScanner((s) => s.earned);
+  const earned = useScanner((s) => s.me?.earned_usd ?? 0);
   const [reward, setReward] = useState<string | null>(null);
 
   useEffect(() => {

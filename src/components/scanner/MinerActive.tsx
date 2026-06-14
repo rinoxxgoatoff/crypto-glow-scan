@@ -3,7 +3,7 @@ import { useScanner } from "@/lib/scanner/state";
 import { formatUsd } from "@/lib/scanner/format";
 
 export function MinerActive() {
-  const earned = useScanner((s) => s.earned);
+  const earned = useScanner((s) => s.me?.earned_usd ?? 0);
   return (
     <div className="flex flex-col gap-3">
       <div className="text-center">

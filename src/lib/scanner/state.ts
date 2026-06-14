@@ -1,6 +1,31 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { COIN_LIST, COINS, type CoinSym } from "./coins";
+import { useEffect } from "react";
+import { COIN_LIST, COINS, DAILY_TON, type CoinSym } from "./coins";
+import {
+  addReward as srvAddReward,
+  bootstrapUser,
+  buyMiner as srvBuyMiner,
+  claimBonus as srvClaimBonus,
+  getMe,
+  resetAll as srvResetAll,
+  startSession as srvStartSession,
+  swap as srvSwap,
+} from "./api.functions";
+
+export interface MeRow {
+  tg_id: number;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  photo_url: string | null;
+  has_miner: boolean;
+  bonus_day: number;
+  last_bonus: string | null;
+  earned_usd: number;
+  sessions: number;
+  is_admin: boolean;
+}
 
 export interface RewardEntry {
   id: string;
@@ -13,100 +38,160 @@ export interface RewardEntry {
 type Balances = Record<CoinSym, number>;
 
 interface ScannerState {
+  initData: string;
+  devTgId: number | null;
+  ready: boolean;
+  authError: string | null;
+  me: MeRow | null;
   bal: Balances;
-  earned: number;
-  sessions: number;
-  hasMiner: boolean;
-  uid: string;
-  bonusDay: number;
-  lastBonus: string | null;
   history: RewardEntry[];
 
-  addReward: (sym: CoinSym, amount: number, usd: number) => void;
-  startSession: () => void;
-  buyMiner: () => void;
-  claimBonus: () => { day: number; tonAmount: number } | null;
-  swap: (from: CoinSym, to: CoinSym, fromAmount: number) => boolean;
-  resetAll: () => void;
+  setDevTgId: (id: number | null) => void;
+  setInitData: (s: string) => void;
+  bootstrap: () => Promise<void>;
+  refresh: () => Promise<void>;
+
+  addReward: (sym: CoinSym, amount: number, usd: number) => Promise<void>;
+  startSession: () => Promise<void>;
+  buyMiner: () => Promise<void>;
+  claimBonus: () => Promise<{ day: number; tonAmount: number } | null>;
+  swap: (from: CoinSym, to: CoinSym, fromAmount: number) => Promise<boolean>;
+  resetAll: () => Promise<void>;
 }
 
 const emptyBal = (): Balances =>
   COIN_LIST.reduce((acc, c) => ({ ...acc, [c]: 0 }), {} as Balances);
 
-const DAILY_TON = [0.1, 0.2, 0.3, 0.5, 0.75, 1, 2];
-const randId = () => Math.random().toString(36).slice(2, 10);
+function authPayload(s: ScannerState) {
+  return { initData: s.initData, devTgId: s.devTgId ?? undefined };
+}
 
 export const useScanner = create<ScannerState>()(
   persist(
     (set, get) => ({
+      initData: "",
+      devTgId: null,
+      ready: false,
+      authError: null,
+      me: null,
       bal: emptyBal(),
-      earned: 0,
-      sessions: 0,
-      hasMiner: false,
-      uid: String(Math.floor(1_000_000_000 + Math.random() * 9_000_000_000)),
-      bonusDay: 1,
-      lastBonus: null,
       history: [],
 
-      addReward: (sym, amount, usd) =>
-        set((s) => ({
-          bal: { ...s.bal, [sym]: (s.bal[sym] || 0) + amount },
-          earned: s.earned + usd,
-          history: [{ id: randId(), ts: Date.now(), sym, amount, usd }, ...s.history].slice(0, 50),
-        })),
+      setDevTgId: (id) => set({ devTgId: id, ready: false }),
+      setInitData: (s) => set({ initData: s }),
 
-      startSession: () => set((s) => ({ sessions: s.sessions + 1 })),
-
-      buyMiner: () => set({ hasMiner: true }),
-
-      claimBonus: () => {
-        const today = new Date().toDateString();
-        const s = get();
-        if (s.lastBonus === today) return null;
-        const day = s.bonusDay;
-        const ton = DAILY_TON[(day - 1) % 7];
-        set({
-          bal: { ...s.bal, TON: s.bal.TON + ton },
-          earned: s.earned + ton * COINS.TON.price,
-          bonusDay: Math.min(day + 1, 7),
-          lastBonus: today,
-        });
-        return { day, tonAmount: ton };
+      bootstrap: async () => {
+        try {
+          const res = await bootstrapUser({ data: authPayload(get()) });
+          set({
+            me: res.me,
+            bal: { ...emptyBal(), ...res.bal },
+            history: res.history,
+            ready: true,
+            authError: null,
+          });
+        } catch (e) {
+          set({ ready: false, authError: (e as Error).message });
+        }
       },
 
-      swap: (from, to, fromAmount) => {
-        const s = get();
-        if (from === to || fromAmount <= 0) return false;
-        if ((s.bal[from] || 0) < fromAmount) return false;
-        const rate = COINS[from].price / COINS[to].price;
-        const out = fromAmount * rate;
-        set({
-          bal: {
-            ...s.bal,
-            [from]: s.bal[from] - fromAmount,
-            [to]: (s.bal[to] || 0) + out,
-          },
-        });
+      refresh: async () => {
+        try {
+          const res = await getMe({ data: authPayload(get()) });
+          set({
+            me: res.me,
+            bal: { ...emptyBal(), ...res.bal },
+            history: res.history,
+          });
+        } catch (e) {
+          console.warn("refresh failed", e);
+        }
+      },
+
+      addReward: async (sym, amount, usd) => {
+        // optimistic
+        set((s) => ({
+          bal: { ...s.bal, [sym]: (s.bal[sym] || 0) + amount },
+          history: [
+            { id: Math.random().toString(36).slice(2, 10), ts: Date.now(), sym, amount, usd },
+            ...s.history,
+          ].slice(0, 50),
+          me: s.me ? { ...s.me, earned_usd: s.me.earned_usd + usd } : s.me,
+        }));
+        try {
+          await srvAddReward({ data: { ...authPayload(get()), sym, amount, usd } });
+        } catch (e) {
+          console.warn("addReward failed", e);
+        }
+      },
+
+      startSession: async () => {
+        set((s) => (s.me ? { me: { ...s.me, sessions: s.me.sessions + 1 } } : s));
+        try {
+          await srvStartSession({ data: authPayload(get()) });
+        } catch (e) {
+          console.warn("startSession failed", e);
+        }
+      },
+
+      buyMiner: async () => {
+        await srvBuyMiner({ data: authPayload(get()) });
+        set((s) => (s.me ? { me: { ...s.me, has_miner: true } } : s));
+      },
+
+      claimBonus: async () => {
+        const res = await srvClaimBonus({ data: authPayload(get()) });
+        if (!res.ok) return null;
+        await get().refresh();
+        return { day: res.day, tonAmount: res.tonAmount };
+      },
+
+      swap: async (from, to, fromAmount) => {
+        const res = await srvSwap({ data: { ...authPayload(get()), from, to, fromAmount } });
+        if (!res.ok) return false;
+        await get().refresh();
         return true;
       },
 
-      resetAll: () =>
-        set({
-          bal: emptyBal(),
-          earned: 0,
-          sessions: 0,
-          hasMiner: false,
-          bonusDay: 1,
-          lastBonus: null,
-          history: [],
-        }),
+      resetAll: async () => {
+        await srvResetAll({ data: authPayload(get()) });
+        await get().refresh();
+      },
     }),
     {
-      name: "scanner-crypto-v6",
-      version: 1,
+      name: "scanner-crypto-tg-v1",
+      partialize: (s) => ({ devTgId: s.devTgId }),
     },
   ),
 );
+
+/** Hook: read Telegram WebApp initData and bootstrap on mount. */
+export function useTelegramBootstrap() {
+  const setInit = useScanner((s) => s.setInitData);
+  const bootstrap = useScanner((s) => s.bootstrap);
+  const ready = useScanner((s) => s.ready);
+  const initData = useScanner((s) => s.initData);
+  const devTgId = useScanner((s) => s.devTgId);
+
+  useEffect(() => {
+    // pull initData from Telegram WebApp if present
+    if (typeof window !== "undefined") {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initData && tg.initData !== initData) {
+        setInit(tg.initData);
+      }
+      try { tg?.ready?.(); tg?.expand?.(); } catch { /* noop */ }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready && (initData || devTgId)) {
+      bootstrap();
+    }
+  }, [initData, devTgId, ready, bootstrap]);
+}
+
+// ---- selectors / helpers ----
 
 export function totalUsd(bal: Balances): number {
   let t = 0;

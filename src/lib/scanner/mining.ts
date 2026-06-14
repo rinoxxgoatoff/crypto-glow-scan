@@ -37,7 +37,7 @@ export function useMining() {
   const [hashRate, setHashRate] = useState<number>(0);
   const addReward = useScanner((s) => s.addReward);
   const startSession = useScanner((s) => s.startSession);
-  const hasMiner = useScanner((s) => s.hasMiner);
+  const hasMiner = useScanner((s) => s.me?.has_miner ?? false);
   const logIdx = useRef(0);
   const logTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const rewardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

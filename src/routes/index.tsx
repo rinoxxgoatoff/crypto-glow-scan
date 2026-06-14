@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { mining, lines, hashRate, base, toggle } = useMining();
-  const hasMiner = useScanner((s) => s.hasMiner);
+  const hasMiner = useScanner((s) => s.me?.has_miner ?? false);
   const bal = useScanner((s) => s.bal);
   const navigate = Route.useNavigate();
 

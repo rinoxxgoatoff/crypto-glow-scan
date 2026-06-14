@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { COINS, type CoinSym } from "@/lib/scanner/coins";
 import { useScanner } from "@/lib/scanner/state";
 import { formatAmount } from "@/lib/scanner/format";
+import { TokenIcon } from "./TokenIcon";
 
 const SWAPPABLE: CoinSym[] = ["BTC", "ETH", "SOL", "USDT", "TON", "XRP", "BNB", "DOGE"];
 
@@ -29,10 +30,10 @@ export function SwapBox() {
     setTo(a);
   };
 
-  const exec = () => {
+  const exec = async () => {
     const v = parseFloat(amount);
     if (!v || v <= 0) return toast.error("Enter an amount");
-    const ok = doSwap(from, to, v);
+    const ok = await doSwap(from, to, v);
     if (!ok) return toast.error(`Insufficient ${from} balance`);
     toast.success(`Swapped ${v} ${from} → ${(v * rate).toFixed(6)} ${to}`);
     setAmount("0");
@@ -122,12 +123,7 @@ function SwapInput({
           className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border bg-surface-3 px-2.5 py-1.5 text-xs font-bold"
           style={{ borderColor: "var(--border)" }}
         >
-          <span
-            className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-black text-white"
-            style={{ background: COINS[sym].color }}
-          >
-            {COINS[sym].icon}
-          </span>
+          <TokenIcon sym={sym} size={20} />
           {sym}
           <ChevronDown className="h-3 w-3 opacity-70" />
         </button>
