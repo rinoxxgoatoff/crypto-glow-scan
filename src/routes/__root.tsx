@@ -6,13 +6,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { TopBar } from "@/components/scanner/TopBar";
 import { BottomNav } from "@/components/scanner/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
+import { useScanner, useTelegramBootstrap } from "@/lib/scanner/state";
 
 function NotFoundComponent() {
   return (
@@ -94,6 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap",
       },
     ],
+    scripts: [{ src: "https://telegram.org/js/telegram-web-app.js", async: true }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -119,14 +121,106 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col bg-background">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto px-3 py-3">
-          <Outlet />
-        </main>
-        <BottomNav />
-      </div>
+      <AppShell />
       <Toaster position="top-center" theme="dark" />
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  useTelegramBootstrap();
+  const ready = useScanner((s) => s.ready);
+  const authError = useScanner((s) => s.authError);
+  const initData = useScanner((s) => s.initData);
+  const devTgId = useScanner((s) => s.devTgId);
+
+  if (!ready) {
+    return (
+      <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        {!initData && !devTgId ? (
+          <DevLoginGate />
+        ) : authError ? (
+          <ErrorGate message={authError} />
+        ) : (
+          <LoadingGate />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col bg-background">
+      <TopBar />
+      <main className="flex-1 overflow-y-auto px-3 py-3">
+        <Outlet />
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+
+function LoadingGate() {
+  return (
+    <>
+      <div className="h-12 w-12 animate-spin rounded-full border-2 border-mint border-t-transparent" />
+      <div className="text-sm text-muted-foreground">Connecting to Telegram…</div>
+    </>
+  );
+}
+
+function ErrorGate({ message }: { message: string }) {
+  const bootstrap = useScanner((s) => s.bootstrap);
+  return (
+    <>
+      <div className="text-4xl">🔒</div>
+      <h2 className="text-lg font-bold">Telegram authentication failed</h2>
+      <p className="text-xs text-muted-foreground">{message}</p>
+      <p className="text-xs text-muted-foreground">
+        Open this app from your Telegram bot to continue.
+      </p>
+      <button
+        onClick={() => bootstrap()}
+        className="rounded-xl bg-mint px-4 py-2 text-sm font-bold text-primary-foreground"
+        style={{ background: "var(--mint)", color: "var(--primary-foreground)" }}
+      >
+        Retry
+      </button>
+    </>
+  );
+}
+
+function DevLoginGate() {
+  const setDevTgId = useScanner((s) => s.setDevTgId);
+  const [val, setVal] = useState("");
+  return (
+    <>
+      <div className="text-4xl">📲</div>
+      <h2 className="text-lg font-bold">Open me from Telegram</h2>
+      <p className="text-xs text-muted-foreground">
+        This mini-app is meant to be launched from the Telegram bot. Each Telegram account has
+        its own balance.
+      </p>
+      <div className="mt-3 w-full max-w-xs rounded-xl border border-border bg-surface-2 p-3 text-left">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Dev preview</div>
+        <input
+          inputMode="numeric"
+          placeholder="Telegram chat ID"
+          value={val}
+          onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))}
+          className="text-mono mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-mint"
+        />
+        <button
+          disabled={!val}
+          onClick={() => setDevTgId(Number(val))}
+          className="mt-2 w-full rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40"
+          style={{ background: "var(--mint)", color: "var(--primary-foreground)" }}
+        >
+          Continue as this user
+        </button>
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          Only works if the server has <code>ALLOW_DEV_BYPASS=1</code> set.
+        </p>
+      </div>
+    </>
   );
 }

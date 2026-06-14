@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Clock, History } from "lucide-react";
 import { SwapBox } from "@/components/scanner/SwapBox";
+import { TokenIcon } from "@/components/scanner/TokenIcon";
 import { useScanner } from "@/lib/scanner/state";
-import { COINS } from "@/lib/scanner/coins";
 import { formatAmount, formatUsd } from "@/lib/scanner/format";
 
 export const Route = createFileRoute("/swap")({
@@ -48,19 +48,13 @@ function SwapPage() {
         ) : (
           <ul className="flex flex-col">
             {history.slice(0, 12).map((h) => {
-              const c = COINS[h.sym];
               return (
                 <li
                   key={h.id}
                   className="flex items-center justify-between border-b border-border py-2.5 last:border-b-0"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className="grid h-8 w-8 place-items-center rounded-full text-xs font-black text-white"
-                      style={{ background: c.color }}
-                    >
-                      {c.icon}
-                    </div>
+                    <TokenIcon sym={h.sym} size={32} />
                     <div>
                       <div className="text-[12px] font-bold">+{formatAmount(h.amount)} {h.sym}</div>
                       <div className="text-[10px] text-muted-foreground">{timeAgo(h.ts)}</div>

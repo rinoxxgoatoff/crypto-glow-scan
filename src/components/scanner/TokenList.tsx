@@ -2,6 +2,7 @@ import { ArrowUpRight, Wallet } from "lucide-react";
 import { COIN_LIST, COINS } from "@/lib/scanner/coins";
 import { formatAmount, formatUsd } from "@/lib/scanner/format";
 import { totalUsd, useScanner } from "@/lib/scanner/state";
+import { TokenIcon } from "./TokenIcon";
 
 interface Props {
   withWithdraw?: boolean;
@@ -46,12 +47,7 @@ export function TokenList({ withWithdraw, onWithdraw }: Props) {
               className="flex items-center justify-between border-b border-border py-2.5 last:border-b-0"
             >
               <div className="flex items-center gap-2.5">
-                <div
-                  className="grid h-9 w-9 place-items-center rounded-full text-sm font-black text-white"
-                  style={{ background: c.color }}
-                >
-                  {c.icon}
-                </div>
+                <TokenIcon sym={sym} size={36} />
                 <div>
                   <div className="text-[13px] font-extrabold">{sym}</div>
                   <div className="text-[11px] text-muted-foreground">{c.name}</div>
