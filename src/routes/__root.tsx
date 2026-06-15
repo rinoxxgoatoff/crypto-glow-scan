@@ -195,32 +195,37 @@ function DevLoginGate() {
   return (
     <>
       <div className="text-4xl">📲</div>
-      <h2 className="text-lg font-bold">Open me from Telegram</h2>
+      <h2 className="text-lg font-bold">Ouvre cette app depuis Telegram</h2>
       <p className="text-xs text-muted-foreground">
-        This mini-app is meant to be launched from the Telegram bot. Each Telegram account has
-        its own balance.
+        Bebol est une mini-app Telegram. Chaque compte Telegram a sa propre balance —
+        ton compte est détecté automatiquement quand tu ouvres l'app depuis le bot
+        (aucune saisie nécessaire).
       </p>
-      <div className="mt-3 w-full max-w-xs rounded-xl border border-border bg-surface-2 p-3 text-left">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Dev preview</div>
-        <input
-          inputMode="numeric"
-          placeholder="Telegram chat ID"
-          value={val}
-          onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))}
-          className="text-mono mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-mint"
-        />
-        <button
-          disabled={!val}
-          onClick={() => setDevTgId(Number(val))}
-          className="mt-2 w-full rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40"
-          style={{ background: "var(--mint)", color: "var(--primary-foreground)" }}
-        >
-          Continue as this user
-        </button>
-        <p className="mt-2 text-[10px] text-muted-foreground">
-          Only works if the server has <code>ALLOW_DEV_BYPASS=1</code> set.
-        </p>
-      </div>
+      {import.meta.env.DEV && (
+        <div className="mt-3 w-full max-w-xs rounded-xl border border-border bg-surface-2 p-3 text-left">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Aperçu navigateur (dev only)
+          </div>
+          <input
+            inputMode="numeric"
+            placeholder="Telegram chat ID"
+            value={val}
+            onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))}
+            className="text-mono mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-mint"
+          />
+          <button
+            disabled={!val}
+            onClick={() => setDevTgId(Number(val))}
+            className="mt-2 w-full rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40"
+            style={{ background: "var(--mint)", color: "var(--primary-foreground)" }}
+          >
+            Continuer
+          </button>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            En production, ce panneau n'apparaît jamais — Telegram fournit l'identité.
+          </p>
+        </div>
+      )}
     </>
   );
 }

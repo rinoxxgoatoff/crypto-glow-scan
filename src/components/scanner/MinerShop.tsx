@@ -4,11 +4,12 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PAY_ADDRESSES } from "@/lib/scanner/coins";
 import { shortAddr } from "@/lib/scanner/format";
+import { TokenIcon } from "./TokenIcon";
 
 const PAY_OPTIONS = [
-  { key: "BTC" as const, sym: "Bitcoin (BTC)", icon: "₿", color: "#f7931a", equiv: "≈ 0.000784 BTC" },
-  { key: "ETH" as const, sym: "Ethereum (ETH)", icon: "E", color: "#627eea", equiv: "≈ 0.02315 ETH" },
-  { key: "SOL" as const, sym: "Solana (SOL)", icon: "S", color: "linear-gradient(135deg,#9945ff,#14f195)", equiv: "≈ 0.352 SOL" },
+  { key: "BTC" as const, sym: "Bitcoin (BTC)", equiv: "≈ 0.000784 BTC" },
+  { key: "ETH" as const, sym: "Ethereum (ETH)", equiv: "≈ 0.02315 ETH" },
+  { key: "SOL" as const, sym: "Solana (SOL)", equiv: "≈ 0.352 SOL" },
 ];
 
 interface Props {
@@ -68,12 +69,7 @@ export function MinerShop({ onIvePaid }: Props) {
               key={p.key}
               className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
             >
-              <div
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black text-white"
-                style={{ background: p.color }}
-              >
-                {p.icon}
-              </div>
+              <TokenIcon sym={p.key} size={32} className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold">{p.sym}</div>
                 <div className="text-[10px] text-muted-foreground">{p.equiv}</div>
