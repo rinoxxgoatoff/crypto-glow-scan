@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { COINS, MINEABLE, type CoinSym } from "./coins";
 import { useScanner } from "./state";
+import { getBoostState } from "./api.functions";
 import { pad2 } from "./format";
 
 export interface TermLine {
