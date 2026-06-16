@@ -85,18 +85,6 @@ function ProfilePage() {
 
       <TokenList />
 
-      <Button
-        variant="secondary"
-        className="mt-1 w-full"
-        onClick={() => {
-          if (confirm("Reset all demo data?")) {
-            reset();
-            toast.success("Demo data reset");
-          }
-        }}
-      >
-        <RotateCcw className="h-4 w-4" /> Reset demo data
-      </Button>
     </div>
   );
 }
