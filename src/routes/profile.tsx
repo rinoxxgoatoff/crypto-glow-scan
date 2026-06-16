@@ -22,7 +22,6 @@ function ProfilePage() {
   const sessions = me?.sessions ?? 0;
   const hasMiner = me?.has_miner ?? false;
   const bal = useScanner((s) => s.bal);
-  const reset = useScanner((s) => s.resetAll);
 
   const total = totalUsd(bal);
   const active = activeTokens(bal);
