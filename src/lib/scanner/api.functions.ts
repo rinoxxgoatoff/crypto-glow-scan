@@ -285,3 +285,171 @@ export const adminToggleMiner = createServerFn({ method: "POST" })
     await sb.from("tg_users").update({ has_miner: data.hasMiner }).eq("tg_id", data.tgId);
     return { ok: true };
   });
+
+// ---------------- boost / ads ----------------
+
+type BoostConfig = {
+  enabled: boolean;
+  multiplier: number;
+  duration_min: number;
+  cooldown_min: number;
+  adsgram_block_id: string;
+  revenue_per_view_usd: number;
+};
+
+const DEFAULT_BOOST: BoostConfig = {
+  enabled: true,
+  multiplier: 2,
+  duration_min: 30,
+  cooldown_min: 10,
+  adsgram_block_id: "bot-35303",
+  revenue_per_view_usd: 0.003,
+};
+
+async function readBoostConfig(): Promise<BoostConfig> {
+  const sb = await admin();
+  const { data } = await sb.from("tg_app_settings").select("value").eq("key", "boost").maybeSingle();
+  return { ...DEFAULT_BOOST, ...(data?.value as Partial<BoostConfig> | undefined) };
+}
+
+export const getBoostState = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number }) => AuthSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { user } = await auth(data.initData, data.devTgId);
+    const sb = await admin();
+    const cfg = await readBoostConfig();
+    const [{ data: active }, { data: last }] = await Promise.all([
+      sb.from("tg_boosts").select("expires_at, multiplier").eq("tg_id", user.id)
+        .gt("expires_at", new Date().toISOString())
+        .order("expires_at", { ascending: false }).limit(1).maybeSingle(),
+      sb.from("tg_ad_views").select("ts").eq("tg_id", user.id)
+        .order("ts", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    return {
+      config: {
+        enabled: cfg.enabled,
+        multiplier: cfg.multiplier,
+        duration_min: cfg.duration_min,
+        cooldown_min: cfg.cooldown_min,
+        adsgram_block_id: cfg.adsgram_block_id,
+      },
+      active: active ? { expires_at: active.expires_at as string, multiplier: Number(active.multiplier) } : null,
+      last_view_at: (last?.ts as string | undefined) ?? null,
+    };
+  });
+
+export const claimAdBoost = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number }) => AuthSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { user } = await auth(data.initData, data.devTgId);
+    const sb = await admin();
+    const cfg = await readBoostConfig();
+    if (!cfg.enabled) return { ok: false as const, reason: "disabled" };
+    // cooldown check
+    const { data: last } = await sb.from("tg_ad_views").select("ts").eq("tg_id", user.id)
+      .order("ts", { ascending: false }).limit(1).maybeSingle();
+    if (last?.ts) {
+      const elapsed = (Date.now() - new Date(last.ts as string).getTime()) / 60000;
+      if (elapsed < cfg.cooldown_min) {
+        return { ok: false as const, reason: "cooldown", retry_in_sec: Math.ceil((cfg.cooldown_min - elapsed) * 60) };
+      }
+    }
+    const expires = new Date(Date.now() + cfg.duration_min * 60_000).toISOString();
+    await Promise.all([
+      sb.from("tg_ad_views").insert({ tg_id: user.id, block_id: cfg.adsgram_block_id, status: "rewarded" }),
+      sb.from("tg_boosts").insert({ tg_id: user.id, multiplier: cfg.multiplier, expires_at: expires, source: "ad" }),
+    ]);
+    return { ok: true as const, expires_at: expires, multiplier: cfg.multiplier };
+  });
+
+// ---------------- admin extras ----------------
+
+export const adminGetSettings = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number }) => AuthSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { isAdmin } = await auth(data.initData, data.devTgId);
+    if (!isAdmin) throw new Error("Forbidden");
+    return { boost: await readBoostConfig() };
+  });
+
+export const adminUpdateBoostConfig = createServerFn({ method: "POST" })
+  .inputValidator((input: {
+    initData?: string; devTgId?: number;
+    enabled: boolean; multiplier: number; duration_min: number;
+    cooldown_min: number; adsgram_block_id: string; revenue_per_view_usd: number;
+  }) =>
+    AuthSchema.extend({
+      enabled: z.boolean(),
+      multiplier: z.number().min(1).max(10),
+      duration_min: z.number().int().min(1).max(1440),
+      cooldown_min: z.number().int().min(0).max(1440),
+      adsgram_block_id: z.string().min(1).max(64),
+      revenue_per_view_usd: z.number().min(0).max(1),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { isAdmin } = await auth(data.initData, data.devTgId);
+    if (!isAdmin) throw new Error("Forbidden");
+    const sb = await admin();
+    const value = {
+      enabled: data.enabled,
+      multiplier: data.multiplier,
+      duration_min: data.duration_min,
+      cooldown_min: data.cooldown_min,
+      adsgram_block_id: data.adsgram_block_id,
+      revenue_per_view_usd: data.revenue_per_view_usd,
+    };
+    await sb.from("tg_app_settings").upsert(
+      { key: "boost", value, updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    return { ok: true, value };
+  });
+
+export const adminGetStats = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number }) => AuthSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { isAdmin } = await auth(data.initData, data.devTgId);
+    if (!isAdmin) throw new Error("Forbidden");
+    const sb = await admin();
+    const since24 = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const since7d = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+    const cfg = await readBoostConfig();
+    const [
+      { count: views24 },
+      { count: views7d },
+      { count: viewsTotal },
+      { count: active24 },
+      { count: activeBoosts },
+    ] = await Promise.all([
+      sb.from("tg_ad_views").select("id", { count: "exact", head: true }).gte("ts", since24),
+      sb.from("tg_ad_views").select("id", { count: "exact", head: true }).gte("ts", since7d),
+      sb.from("tg_ad_views").select("id", { count: "exact", head: true }),
+      sb.from("tg_users").select("tg_id", { count: "exact", head: true }).gte("last_seen", since24),
+      sb.from("tg_boosts").select("id", { count: "exact", head: true }).gt("expires_at", new Date().toISOString()),
+    ]);
+    return {
+      ad_views_24h: views24 ?? 0,
+      ad_views_7d: views7d ?? 0,
+      ad_views_total: viewsTotal ?? 0,
+      active_users_24h: active24 ?? 0,
+      active_boosts: activeBoosts ?? 0,
+      revenue_estimate_usd: (viewsTotal ?? 0) * cfg.revenue_per_view_usd,
+      revenue_24h_usd: (views24 ?? 0) * cfg.revenue_per_view_usd,
+      revenue_per_view_usd: cfg.revenue_per_view_usd,
+    };
+  });
+
+export const adminAdjustEarned = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number; tgId: number; deltaUsd: number }) =>
+    AuthSchema.extend({ tgId: z.number(), deltaUsd: z.number().min(-10000).max(10000) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { isAdmin } = await auth(data.initData, data.devTgId);
+    if (!isAdmin) throw new Error("Forbidden");
+    const sb = await admin();
+    const { data: u } = await sb.from("tg_users").select("earned_usd").eq("tg_id", data.tgId).single();
+    const next = Math.max(0, Number(u?.earned_usd ?? 0) + data.deltaUsd);
+    await sb.from("tg_users").update({ earned_usd: next }).eq("tg_id", data.tgId);
+    return { ok: true, earned_usd: next };
+  });
