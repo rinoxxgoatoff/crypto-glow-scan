@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { BoostButton } from "@/components/scanner/BoostButton";
 import { DailyBonus } from "@/components/scanner/DailyBonus";
 import { ScannerTerminal } from "@/components/scanner/ScannerTerminal";
 import { TokenList } from "@/components/scanner/TokenList";
