@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Copy, RotateCcw, Rocket } from "lucide-react";
+import { Copy, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { TokenList } from "@/components/scanner/TokenList";
 import { activeTokens, totalUsd, useScanner } from "@/lib/scanner/state";
 import { formatUsd } from "@/lib/scanner/format";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
