@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      tg_ad_views: {
+        Row: {
+          block_id: string | null
+          id: string
+          status: string
+          tg_id: number
+          ts: string
+        }
+        Insert: {
+          block_id?: string | null
+          id?: string
+          status?: string
+          tg_id: number
+          ts?: string
+        }
+        Update: {
+          block_id?: string | null
+          id?: string
+          status?: string
+          tg_id?: number
+          ts?: string
+        }
+        Relationships: []
+      }
+      tg_app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       tg_balances: {
         Row: {
           amount: number
@@ -42,6 +84,33 @@ export type Database = {
             referencedColumns: ["tg_id"]
           },
         ]
+      }
+      tg_boosts: {
+        Row: {
+          expires_at: string
+          id: string
+          multiplier: number
+          source: string
+          started_at: string
+          tg_id: number
+        }
+        Insert: {
+          expires_at: string
+          id?: string
+          multiplier?: number
+          source?: string
+          started_at?: string
+          tg_id: number
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          multiplier?: number
+          source?: string
+          started_at?: string
+          tg_id?: number
+        }
+        Relationships: []
       }
       tg_history: {
         Row: {
