@@ -99,7 +99,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap",
       },
     ],
-    scripts: [{ src: "https://telegram.org/js/telegram-web-app.js", async: true }],
+    scripts: [
+      { src: "https://telegram.org/js/telegram-web-app.js", async: true },
+      { src: "https://sad.adsgram.ai/js/sad.min.js", async: true },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

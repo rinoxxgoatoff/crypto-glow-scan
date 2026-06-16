@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Copy, RotateCcw, Rocket } from "lucide-react";
+import { Copy, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { TokenList } from "@/components/scanner/TokenList";
 import { activeTokens, totalUsd, useScanner } from "@/lib/scanner/state";
 import { formatUsd } from "@/lib/scanner/format";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -23,7 +22,6 @@ function ProfilePage() {
   const sessions = me?.sessions ?? 0;
   const hasMiner = me?.has_miner ?? false;
   const bal = useScanner((s) => s.bal);
-  const reset = useScanner((s) => s.resetAll);
 
   const total = totalUsd(bal);
   const active = activeTokens(bal);
@@ -87,18 +85,6 @@ function ProfilePage() {
 
       <TokenList />
 
-      <Button
-        variant="secondary"
-        className="mt-1 w-full"
-        onClick={() => {
-          if (confirm("Reset all demo data?")) {
-            reset();
-            toast.success("Demo data reset");
-          }
-        }}
-      >
-        <RotateCcw className="h-4 w-4" /> Reset demo data
-      </Button>
     </div>
   );
 }

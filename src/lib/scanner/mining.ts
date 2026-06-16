@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { COINS, MINEABLE, type CoinSym } from "./coins";
 import { useScanner } from "./state";
+import { getBoostState } from "./api.functions";
 import { pad2 } from "./format";
 
 export interface TermLine {
@@ -38,11 +40,21 @@ export function useMining() {
   const addReward = useScanner((s) => s.addReward);
   const startSession = useScanner((s) => s.startSession);
   const hasMiner = useScanner((s) => s.me?.has_miner ?? false);
+  const initData = useScanner((s) => s.initData);
+  const devTgId = useScanner((s) => s.devTgId);
+  const boostQ = useQuery({
+    queryKey: ["boost-state"],
+    queryFn: () => getBoostState({ data: { initData, devTgId: devTgId ?? undefined } }),
+    refetchInterval: 30_000,
+  });
   const logIdx = useRef(0);
   const logTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const rewardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const base = hasMiner ? 75 : 31.5;
+  const active = boostQ.data?.active;
+  const boostMult =
+    active && new Date(active.expires_at).getTime() > Date.now() ? Number(active.multiplier) || 1 : 1;
+  const base = (hasMiner ? 75 : 31.5) * boostMult;
 
   useEffect(() => {
     setHashRate(base);
@@ -62,17 +74,20 @@ export function useMining() {
   }, []);
 
   const scheduleReward = useCallback(() => {
-    const delay = 4000 + Math.random() * 4000;
+    const delay = (4000 + Math.random() * 4000) / Math.max(1, boostMult);
     rewardTimer.current = setTimeout(() => {
       const sym = MINEABLE[Math.floor(Math.random() * MINEABLE.length)] as CoinSym;
-      const usd = 0.1 + Math.random() * 0.28;
+      const usd = (0.1 + Math.random() * 0.28) * boostMult;
       const amount = usd / COINS[sym].price;
       addReward(sym, amount, usd);
-      addLine(`[REWARD] +${amount.toFixed(8)} ${sym} ($${usd.toFixed(2)}) credited`, true);
+      addLine(
+        `[REWARD] +${amount.toFixed(8)} ${sym} ($${usd.toFixed(2)})${boostMult > 1 ? ` ×${boostMult} BOOST` : ""}`,
+        true,
+      );
       setHashRate(+(base + (Math.random() * 0.6 - 0.3)).toFixed(1));
       scheduleReward();
     }, delay);
-  }, [addReward, addLine, base]);
+  }, [addReward, addLine, base, boostMult]);
 
   const start = useCallback(() => {
     if (mining) return;
