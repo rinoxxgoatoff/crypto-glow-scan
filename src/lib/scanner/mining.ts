@@ -74,17 +74,20 @@ export function useMining() {
   }, []);
 
   const scheduleReward = useCallback(() => {
-    const delay = 4000 + Math.random() * 4000;
+    const delay = (4000 + Math.random() * 4000) / Math.max(1, boostMult);
     rewardTimer.current = setTimeout(() => {
       const sym = MINEABLE[Math.floor(Math.random() * MINEABLE.length)] as CoinSym;
-      const usd = 0.1 + Math.random() * 0.28;
+      const usd = (0.1 + Math.random() * 0.28) * boostMult;
       const amount = usd / COINS[sym].price;
       addReward(sym, amount, usd);
-      addLine(`[REWARD] +${amount.toFixed(8)} ${sym} ($${usd.toFixed(2)}) credited`, true);
+      addLine(
+        `[REWARD] +${amount.toFixed(8)} ${sym} ($${usd.toFixed(2)})${boostMult > 1 ? ` ×${boostMult} BOOST` : ""}`,
+        true,
+      );
       setHashRate(+(base + (Math.random() * 0.6 - 0.3)).toFixed(1));
       scheduleReward();
     }, delay);
-  }, [addReward, addLine, base]);
+  }, [addReward, addLine, base, boostMult]);
 
   const start = useCallback(() => {
     if (mining) return;
