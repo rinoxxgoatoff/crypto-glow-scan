@@ -40,11 +40,21 @@ export function useMining() {
   const addReward = useScanner((s) => s.addReward);
   const startSession = useScanner((s) => s.startSession);
   const hasMiner = useScanner((s) => s.me?.has_miner ?? false);
+  const initData = useScanner((s) => s.initData);
+  const devTgId = useScanner((s) => s.devTgId);
+  const boostQ = useQuery({
+    queryKey: ["boost-state"],
+    queryFn: () => getBoostState({ data: { initData, devTgId: devTgId ?? undefined } }),
+    refetchInterval: 30_000,
+  });
   const logIdx = useRef(0);
   const logTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const rewardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const base = hasMiner ? 75 : 31.5;
+  const active = boostQ.data?.active;
+  const boostMult =
+    active && new Date(active.expires_at).getTime() > Date.now() ? Number(active.multiplier) || 1 : 1;
+  const base = (hasMiner ? 75 : 31.5) * boostMult;
 
   useEffect(() => {
     setHashRate(base);
