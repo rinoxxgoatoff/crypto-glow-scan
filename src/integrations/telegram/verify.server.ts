@@ -68,7 +68,9 @@ export function authenticateTg(input: { initData?: string; devTgId?: number }): 
   if (input.initData && input.initData.length > 0) {
     return verifyTelegramInitData(input.initData);
   }
-  if (process.env.ALLOW_DEV_BYPASS === "1" && input.devTgId) {
+  const devAllowed =
+    process.env.ALLOW_DEV_BYPASS === "1" || process.env.NODE_ENV !== "production";
+  if (devAllowed && input.devTgId) {
     return {
       user: { id: input.devTgId, first_name: "Dev", username: `dev_${input.devTgId}` },
       isAdmin: isAdminTg(input.devTgId),
