@@ -237,6 +237,75 @@ function AdsPanel({ auth }: { auth: { initData: string; devTgId?: number } }) {
   );
 }
 
+function BoostHistoryPanel({ auth }: { auth: { initData: string; devTgId?: number } }) {
+  const q = useQuery({
+    queryKey: ["admin", "boost-history"],
+    queryFn: () => adminGetBoostHistory({ data: { ...auth, limit: 100 } }),
+    refetchInterval: 20000,
+  });
+  const data = q.data;
+  const fmtDate = (s: string) => new Date(s).toLocaleString();
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3">
+      <div className="text-sm font-black">Historique des boosts</div>
+      {!data ? (
+        <div className="py-6 text-center text-xs text-muted-foreground">Loading…</div>
+      ) : (
+        <>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Boosts activés ({data.boosts.length})</div>
+          {data.boosts.length === 0 ? (
+            <div className="py-2 text-center text-[11px] text-muted-foreground">Aucun boost</div>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {data.boosts.map((b) => {
+                const active = new Date(b.expires_at).getTime() > Date.now();
+                return (
+                  <li key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2 py-1.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[11px] font-bold">{b.name}</div>
+                      <div className="text-mono text-[10px] text-muted-foreground">
+                        {b.tg_id} · {b.source} · ×{b.multiplier}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{fmtDate(b.started_at)}</div>
+                    </div>
+                    <span
+                      className="rounded-full px-1.5 py-[1px] text-[9px] font-bold"
+                      style={{
+                        background: active ? "color-mix(in oklab, var(--mint) 18%, transparent)" : "var(--surface-2)",
+                        color: active ? "var(--mint)" : "var(--muted-foreground)",
+                      }}
+                    >
+                      {active ? "ACTIF" : "EXPIRÉ"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Vues de pub ({data.views.length})</div>
+          {data.views.length === 0 ? (
+            <div className="py-2 text-center text-[11px] text-muted-foreground">Aucune vue</div>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {data.views.map((v) => (
+                <li key={v.id} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[11px] font-bold">{v.name}</div>
+                    <div className="text-mono text-[10px] text-muted-foreground">
+                      {v.tg_id} · {v.block_id || "—"} · {v.status}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">{fmtDate(v.ts)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } }) {
   const cfgQ = useQuery({
     queryKey: ["admin", "settings"],
