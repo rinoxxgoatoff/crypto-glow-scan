@@ -453,3 +453,49 @@ export const adminAdjustEarned = createServerFn({ method: "POST" })
     await sb.from("tg_users").update({ earned_usd: next }).eq("tg_id", data.tgId);
     return { ok: true, earned_usd: next };
   });
+
+export const adminGetBoostHistory = createServerFn({ method: "POST" })
+  .inputValidator((input: { initData?: string; devTgId?: number; limit?: number }) =>
+    AuthSchema.extend({ limit: z.number().int().min(1).max(500).optional() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { isAdmin } = await auth(data.initData, data.devTgId);
+    if (!isAdmin) throw new Error("Forbidden");
+    const sb = await admin();
+    const limit = data.limit ?? 100;
+    const [{ data: boosts }, { data: views }, { data: users }] = await Promise.all([
+      sb.from("tg_boosts")
+        .select("id, tg_id, multiplier, started_at, expires_at, source")
+        .order("started_at", { ascending: false }).limit(limit),
+      sb.from("tg_ad_views")
+        .select("id, tg_id, ts, block_id, status")
+        .order("ts", { ascending: false }).limit(limit),
+      sb.from("tg_users").select("tg_id, username, first_name, last_name"),
+    ]);
+    const nameByTg = new Map<number, string>();
+    for (const u of users ?? []) {
+      const name = [u.first_name, u.last_name].filter(Boolean).join(" ")
+        || (u.username ? `@${u.username}` : `User ${u.tg_id}`);
+      nameByTg.set(Number(u.tg_id), name);
+    }
+    return {
+      boosts: (boosts ?? []).map((b) => ({
+        id: b.id as string,
+        tg_id: Number(b.tg_id),
+        name: nameByTg.get(Number(b.tg_id)) ?? `User ${b.tg_id}`,
+        multiplier: Number(b.multiplier),
+        started_at: b.started_at as string,
+        expires_at: b.expires_at as string,
+        source: b.source as string,
+      })),
+      views: (views ?? []).map((v) => ({
+        id: v.id as string,
+        tg_id: Number(v.tg_id),
+        name: nameByTg.get(Number(v.tg_id)) ?? `User ${v.tg_id}`,
+        ts: v.ts as string,
+        block_id: (v.block_id as string | null) ?? "",
+        status: v.status as string,
+      })),
+    };
+  });
+

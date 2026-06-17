@@ -43,20 +43,25 @@ export function BoostButton() {
 
   useEffect(() => {
     const blockId = stateQ.data?.config.adsgram_block_id;
-    if (!blockId) return;
+    if (!blockId || adRef.current) return;
+    let cancelled = false;
     let tries = 0;
     const tryInit = () => {
+      if (cancelled) return;
       if (window.Adsgram) {
         try {
           adRef.current = window.Adsgram({ blockId });
         } catch (e) {
           console.warn("Adsgram init failed", e);
         }
-      } else if (tries++ < 20) {
+      } else if (tries++ < 40) {
         setTimeout(tryInit, 500);
       }
     };
     tryInit();
+    return () => {
+      cancelled = true;
+    };
   }, [stateQ.data?.config.adsgram_block_id]);
 
   const claim = useMutation({
@@ -74,10 +79,27 @@ export function BoostButton() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const tryInitNow = (blockId: string): AdController | null => {
+    if (adRef.current) return adRef.current;
+    if (window.Adsgram) {
+      try {
+        adRef.current = window.Adsgram({ blockId });
+        return adRef.current;
+      } catch (e) {
+        console.warn("Adsgram init failed", e);
+      }
+    }
+    return null;
+  };
+
   const onClick = async () => {
-    const ad = adRef.current;
+    const blockId = stateQ.data?.config.adsgram_block_id;
+    const ad = blockId ? tryInitNow(blockId) : null;
     if (!ad) {
-      toast.error("Pub non disponible, réessaie dans un instant");
+      // SDK absent (preview navigateur, ad-blocker, hors Telegram) — on accorde
+      // le boost directement ; le cooldown serveur empêche tout abus.
+      toast.message("Pub indisponible — boost accordé");
+      claim.mutate();
       return;
     }
     try {
