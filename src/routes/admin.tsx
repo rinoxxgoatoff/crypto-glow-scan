@@ -10,6 +10,7 @@ import { useScanner } from "@/lib/scanner/state";
 import {
   adminListUsers, adminToggleMiner, adminGetSettings,
   adminUpdateBoostConfig, adminGetStats, adminAdjustEarned,
+  adminGetBoostHistory,
 } from "@/lib/scanner/api.functions";
 import { formatUsd } from "@/lib/scanner/format";
 
