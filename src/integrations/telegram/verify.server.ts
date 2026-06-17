@@ -71,8 +71,10 @@ export function authenticateTg(input: { initData?: string; devTgId?: number }): 
   // Fallback for browser preview / hors-Telegram : accepte un devTgId direct.
   // Le contenu est purement démo (mining factice) donc l'impersonation n'a aucun impact financier.
   if (input.devTgId) {
+    // On n'invente pas de username/first_name : sinon on écraserait les vraies
+    // données récupérées via Telegram lors d'une session précédente.
     return {
-      user: { id: input.devTgId, first_name: "Dev", username: `dev_${input.devTgId}` },
+      user: { id: input.devTgId },
       isAdmin: isAdminTg(input.devTgId),
     };
   }

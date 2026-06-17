@@ -24,18 +24,19 @@ async function ensureUserRow(tg: {
   photo_url?: string; language_code?: string;
 }) {
   const sb = await admin();
-  await sb.from("tg_users").upsert(
-    {
-      tg_id: tg.id,
-      username: tg.username ?? null,
-      first_name: tg.first_name ?? null,
-      last_name: tg.last_name ?? null,
-      photo_url: tg.photo_url ?? null,
-      language_code: tg.language_code ?? null,
-      last_seen: new Date().toISOString(),
-    },
-    { onConflict: "tg_id" },
-  );
+  // Ne pousser que les champs réellement fournis : évite d'écraser les vrais
+  // username/first_name/photo (Telegram) avec des null lors d'un bootstrap
+  // browser-preview (devTgId sans profil).
+  const row = {
+    tg_id: tg.id,
+    last_seen: new Date().toISOString(),
+    ...(tg.username ? { username: tg.username } : {}),
+    ...(tg.first_name ? { first_name: tg.first_name } : {}),
+    ...(tg.last_name ? { last_name: tg.last_name } : {}),
+    ...(tg.photo_url ? { photo_url: tg.photo_url } : {}),
+    ...(tg.language_code ? { language_code: tg.language_code } : {}),
+  };
+  await sb.from("tg_users").upsert(row, { onConflict: "tg_id" });
 }
 
 async function loadFullMe(tgId: number, isAdmin: boolean) {
