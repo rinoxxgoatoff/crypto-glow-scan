@@ -27,15 +27,15 @@ async function ensureUserRow(tg: {
   // Ne pousser que les champs réellement fournis : évite d'écraser les vrais
   // username/first_name/photo (Telegram) avec des null lors d'un bootstrap
   // browser-preview (devTgId sans profil).
-  const row: Record<string, unknown> = {
+  const row = {
     tg_id: tg.id,
     last_seen: new Date().toISOString(),
+    ...(tg.username ? { username: tg.username } : {}),
+    ...(tg.first_name ? { first_name: tg.first_name } : {}),
+    ...(tg.last_name ? { last_name: tg.last_name } : {}),
+    ...(tg.photo_url ? { photo_url: tg.photo_url } : {}),
+    ...(tg.language_code ? { language_code: tg.language_code } : {}),
   };
-  if (tg.username) row.username = tg.username;
-  if (tg.first_name) row.first_name = tg.first_name;
-  if (tg.last_name) row.last_name = tg.last_name;
-  if (tg.photo_url) row.photo_url = tg.photo_url;
-  if (tg.language_code) row.language_code = tg.language_code;
   await sb.from("tg_users").upsert(row, { onConflict: "tg_id" });
 }
 
