@@ -100,7 +100,7 @@ function AdminPage() {
       </div>
 
       <div className="flex gap-1 rounded-xl border border-border bg-surface-2 p-1 text-[11px] font-bold">
-        {(["users", "ads", "settings"] as const).map((t) => (
+        {(["users", "ads", "boosts", "settings"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -110,7 +110,7 @@ function AdminPage() {
               color: tab === t ? "var(--mint)" : "var(--muted-foreground)",
             }}
           >
-            {t === "users" ? "Users" : t === "ads" ? "Pubs" : "Réglages"}
+            {t === "users" ? "Users" : t === "ads" ? "Pubs" : t === "boosts" ? "Boosts" : "Réglages"}
           </button>
         ))}
       </div>
