@@ -205,6 +205,7 @@ function AdminPage() {
       )}
 
       {tab === "ads" && <AdsPanel auth={auth} />}
+      {tab === "boosts" && <BoostHistoryPanel auth={auth} />}
       {tab === "settings" && <SettingsPanel auth={auth} />}
     </div>
   );
