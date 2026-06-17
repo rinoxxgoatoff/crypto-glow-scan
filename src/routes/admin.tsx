@@ -30,7 +30,7 @@ function AdminPage() {
   const devTgId = useScanner((s) => s.devTgId);
   const auth = { initData, devTgId: devTgId ?? undefined };
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"users" | "ads" | "settings">("users");
+  const [tab, setTab] = useState<"users" | "ads" | "boosts" | "settings">("users");
 
   const usersQuery = useQuery({
     queryKey: ["admin", "users"],
