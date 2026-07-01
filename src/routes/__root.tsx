@@ -87,8 +87,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Scanner Crypto — Cloud Mining Mini App" },
       { name: "twitter:description", content: "Mine, swap and track 12 cryptocurrencies from one slick mini-app interface." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7ce312cb-7879-49f0-b96a-9c201890fa70/id-preview-245155ef--07685011-b189-49e7-bdfc-3b791247a408.lovable.app-1781533533798.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7ce312cb-7879-49f0-b96a-9c201890fa70/id-preview-245155ef--07685011-b189-49e7-bdfc-3b791247a408.lovable.app-1781533533798.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
