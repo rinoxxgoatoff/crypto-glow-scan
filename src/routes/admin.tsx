@@ -94,9 +94,9 @@ function AdminPage() {
         <Kpi icon={<DollarSign className="h-4 w-4" />} label="Total mined" value={formatUsd(totalMined)} />
         <Kpi icon={<Activity className="h-4 w-4" />} label="Active 24h" value={String(stats?.active_users_24h ?? "—")} />
         <Kpi icon={<Eye className="h-4 w-4" />} label="Ad views 24h" value={String(stats?.ad_views_24h ?? "—")} />
-        <Kpi icon={<Zap className="h-4 w-4" />} label="Boosts actifs" value={String(stats?.active_boosts ?? "—")} />
-        <Kpi icon={<TrendingUp className="h-4 w-4" />} label="Revenu 24h" value={stats ? formatUsd(stats.revenue_24h_usd) : "—"} />
-        <Kpi icon={<DollarSign className="h-4 w-4" />} label="Revenu total" value={stats ? formatUsd(stats.revenue_estimate_usd) : "—"} />
+        <Kpi icon={<Zap className="h-4 w-4" />} label="Active boosts" value={String(stats?.active_boosts ?? "—")} />
+        <Kpi icon={<TrendingUp className="h-4 w-4" />} label="Revenue 24h" value={stats ? formatUsd(stats.revenue_24h_usd) : "—"} />
+        <Kpi icon={<DollarSign className="h-4 w-4" />} label="Total revenue" value={stats ? formatUsd(stats.revenue_estimate_usd) : "—"} />
       </div>
 
       <div className="flex gap-1 rounded-xl border border-border bg-surface-2 p-1 text-[11px] font-bold">
@@ -110,7 +110,7 @@ function AdminPage() {
               color: tab === t ? "var(--mint)" : "var(--muted-foreground)",
             }}
           >
-            {t === "users" ? "Users" : t === "ads" ? "Pubs" : t === "boosts" ? "Boosts" : "Réglages"}
+            {t === "users" ? "Users" : t === "ads" ? "Ads" : t === "boosts" ? "Boosts" : "Settings"}
           </button>
         ))}
       </div>
@@ -179,7 +179,7 @@ function AdminPage() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => {
-                              const v = prompt("Ajouter combien d'$ ?", "10");
+                              const v = prompt("Add how much ($)?", "10");
                               if (v) adjustMutation.mutate({ tgId: u.tg_id, deltaUsd: Number(v) });
                             }}
                             className="grid h-6 w-6 place-items-center rounded-md bg-surface-2 text-[10px]"
@@ -187,7 +187,7 @@ function AdminPage() {
                           ><Plus className="h-3 w-3" /></button>
                           <button
                             onClick={() => {
-                              const v = prompt("Retirer combien d'$ ?", "10");
+                              const v = prompt("Remove how much ($)?", "10");
                               if (v) adjustMutation.mutate({ tgId: u.tg_id, deltaUsd: -Math.abs(Number(v)) });
                             }}
                             className="grid h-6 w-6 place-items-center rounded-md bg-surface-2 text-[10px]"
@@ -220,18 +220,18 @@ function AdsPanel({ auth }: { auth: { initData: string; devTgId?: number } }) {
   const s = statsQ.data;
   return (
     <section className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-4">
-      <div className="text-sm font-black">Revenus publicitaires</div>
+      <div className="text-sm font-black">Ad Revenue</div>
       <p className="text-[11px] text-muted-foreground">
-        Estimation basée sur le CPM Adsgram. Les paiements réels arrivent sur ton wallet TON
-        configuré dans ton compte Adsgram (puis convertibles en € via exchange).
+        Estimate based on Adsgram CPM. Actual payments arrive in your TON wallet
+        configured in your Adsgram account (then convertible to $ via exchange).
       </p>
       <div className="grid grid-cols-2 gap-2 pt-2">
-        <Mini label="Vues 24h" value={String(s?.ad_views_24h ?? "—")} />
-        <Mini label="Vues 7j" value={String(s?.ad_views_7d ?? "—")} />
-        <Mini label="Vues totales" value={String(s?.ad_views_total ?? "—")} />
-        <Mini label="$ / vue" value={s ? `$${s.revenue_per_view_usd.toFixed(4)}` : "—"} />
-        <Mini label="Revenu 24h" value={s ? formatUsd(s.revenue_24h_usd) : "—"} />
-        <Mini label="Revenu total" value={s ? formatUsd(s.revenue_estimate_usd) : "—"} />
+        <Mini label="Views 24h" value={String(s?.ad_views_24h ?? "—")} />
+        <Mini label="Views 7d" value={String(s?.ad_views_7d ?? "—")} />
+        <Mini label="Total views" value={String(s?.ad_views_total ?? "—")} />
+        <Mini label="$ / view" value={s ? `$${s.revenue_per_view_usd.toFixed(4)}` : "—"} />
+        <Mini label="Revenue 24h" value={s ? formatUsd(s.revenue_24h_usd) : "—"} />
+        <Mini label="Total revenue" value={s ? formatUsd(s.revenue_estimate_usd) : "—"} />
       </div>
     </section>
   );
@@ -247,14 +247,14 @@ function BoostHistoryPanel({ auth }: { auth: { initData: string; devTgId?: numbe
   const fmtDate = (s: string) => new Date(s).toLocaleString();
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3">
-      <div className="text-sm font-black">Historique des boosts</div>
+      <div className="text-sm font-black">Boost History</div>
       {!data ? (
         <div className="py-6 text-center text-xs text-muted-foreground">Loading…</div>
       ) : (
         <>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Boosts activés ({data.boosts.length})</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Active boosts ({data.boosts.length})</div>
           {data.boosts.length === 0 ? (
-            <div className="py-2 text-center text-[11px] text-muted-foreground">Aucun boost</div>
+            <div className="py-2 text-center text-[11px] text-muted-foreground">No boosts</div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {data.boosts.map((b) => {
@@ -275,16 +275,16 @@ function BoostHistoryPanel({ auth }: { auth: { initData: string; devTgId?: numbe
                         color: active ? "var(--mint)" : "var(--muted-foreground)",
                       }}
                     >
-                      {active ? "ACTIF" : "EXPIRÉ"}
+                      {active ? "ACTIVE" : "EXPIRED"}
                     </span>
                   </li>
                 );
               })}
             </ul>
           )}
-          <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Vues de pub ({data.views.length})</div>
+          <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Ad views ({data.views.length})</div>
           {data.views.length === 0 ? (
-            <div className="py-2 text-center text-[11px] text-muted-foreground">Aucune vue</div>
+            <div className="py-2 text-center text-[11px] text-muted-foreground">No views</div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {data.views.map((v) => (
@@ -322,7 +322,7 @@ function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } 
 
   const save = useMutation({
     mutationFn: () => adminUpdateBoostConfig({ data: { ...auth, ...form! } }),
-    onSuccess: () => { toast.success("Réglages enregistrés"); cfgQ.refetch(); },
+    onSuccess: () => { toast.success("Settings saved"); cfgQ.refetch(); },
     onError: (e) => toast.error((e as Error).message),
   });
 
@@ -330,8 +330,8 @@ function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } 
 
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
-      <div className="text-sm font-black">Boost publicitaire</div>
-      <Field label="Activé">
+      <div className="text-sm font-black">Ad Boost</div>
+      <Field label="Enabled">
         <button
           onClick={() => setForm({ ...form, enabled: !form.enabled })}
           className="rounded-lg px-3 py-1 text-[11px] font-bold"
@@ -341,9 +341,9 @@ function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } 
           }}
         >{form.enabled ? "ON" : "OFF"}</button>
       </Field>
-      <NumField label="Multiplicateur (×)" value={form.multiplier} step={0.5} min={1} max={10}
+      <NumField label="Multiplier (×)" value={form.multiplier} step={0.5} min={1} max={10}
         onChange={(v) => setForm({ ...form, multiplier: v })} />
-      <NumField label="Durée (minutes)" value={form.duration_min} step={5} min={1} max={1440}
+      <NumField label="Duration (minutes)" value={form.duration_min} step={5} min={1} max={1440}
         onChange={(v) => setForm({ ...form, duration_min: Math.round(v) })} />
       <NumField label="Cooldown (minutes)" value={form.cooldown_min} step={1} min={0} max={1440}
         onChange={(v) => setForm({ ...form, cooldown_min: Math.round(v) })} />
@@ -354,7 +354,7 @@ function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } 
           className="text-mono w-40 rounded-lg border border-border bg-surface-2 px-2 py-1 text-right text-[11px] outline-none focus:border-mint"
         />
       </Field>
-      <NumField label="$ par vue (CPM/1000)" value={form.revenue_per_view_usd} step={0.001} min={0} max={1}
+      <NumField label="$ per view (CPM/1000)" value={form.revenue_per_view_usd} step={0.001} min={0} max={1}
         onChange={(v) => setForm({ ...form, revenue_per_view_usd: v })} />
       <button
         onClick={() => save.mutate()}
@@ -362,7 +362,7 @@ function SettingsPanel({ auth }: { auth: { initData: string; devTgId?: number } 
         className="mt-2 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold"
         style={{ background: "var(--mint)", color: "var(--primary-foreground)" }}
       >
-        <Save className="h-4 w-4" /> Enregistrer
+        <Save className="h-4 w-4" /> Save
       </button>
     </section>
   );
