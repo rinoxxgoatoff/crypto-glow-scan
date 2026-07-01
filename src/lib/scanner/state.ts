@@ -168,10 +168,12 @@ export const useScanner = create<ScannerState>()(
 /** Hook: read Telegram WebApp initData and bootstrap on mount. */
 export function useTelegramBootstrap() {
   const setInit = useScanner((s) => s.setInitData);
+  const setDevTgId = useScanner((s) => s.setDevTgId);
   const bootstrap = useScanner((s) => s.bootstrap);
   const ready = useScanner((s) => s.ready);
   const initData = useScanner((s) => s.initData);
   const devTgId = useScanner((s) => s.devTgId);
+
 
   useEffect(() => {
     // telegram-web-app.js is loaded async, so poll until Telegram.WebApp
