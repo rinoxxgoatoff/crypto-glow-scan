@@ -79,29 +79,34 @@ export function BoostButton() {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const tryInitNow = (blockId: string): AdController | null => {
+  const waitForAdsgram = async (blockId: string, maxMs = 3000): Promise<AdController | null> => {
     if (adRef.current) return adRef.current;
-    if (window.Adsgram) {
-      try {
-        adRef.current = window.Adsgram({ blockId });
-        return adRef.current;
-      } catch (e) {
-        console.warn("Adsgram init failed", e);
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      if (window.Adsgram) {
+        try {
+          adRef.current = window.Adsgram({ blockId });
+          return adRef.current;
+        } catch (e) {
+          console.warn("Adsgram init failed", e);
+          return null;
+        }
       }
+      await new Promise((r) => setTimeout(r, 200));
     }
     return null;
   };
 
   const onClick = async () => {
     const blockId = stateQ.data?.config.adsgram_block_id;
-    const ad = blockId ? tryInitNow(blockId) : null;
+    const ad = blockId ? await waitForAdsgram(blockId) : null;
     if (!ad) {
       // SDK absent (preview navigateur, ad-blocker, hors Telegram) — on accorde
       // le boost directement ; le cooldown serveur empêche tout abus.
-      toast.message("Pub indisponible — boost accordé");
       claim.mutate();
       return;
     }
+
     try {
       const r = await ad.show();
       if (r && (r as any).error) {
