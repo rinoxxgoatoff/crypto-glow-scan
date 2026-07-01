@@ -190,15 +190,20 @@ export function useTelegramBootstrap() {
         return;
       }
       if (tg && tries > 4) {
-        // WebApp object exists but initData empty → app was opened outside a bot.
+        // WebApp object exists but initData empty (opened outside a bot, or
+        // Telegram Desktop preview). Fall back to initDataUnsafe.user.id so
+        // the user can still use the app.
         try { tg.ready?.(); tg.expand?.(); } catch { /* noop */ }
+        const uid = tg.initDataUnsafe?.user?.id;
+        if (uid) setDevTgId(Number(uid));
         return;
       }
       if (tries++ < 20) setTimeout(poll, 250);
     };
     poll();
     return () => { cancelled = true; };
-  }, [setInit]);
+  }, [setInit, setDevTgId]);
+
 
   useEffect(() => {
     if (!ready && (initData || devTgId)) {
