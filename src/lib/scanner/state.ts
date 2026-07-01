@@ -168,21 +168,42 @@ export const useScanner = create<ScannerState>()(
 /** Hook: read Telegram WebApp initData and bootstrap on mount. */
 export function useTelegramBootstrap() {
   const setInit = useScanner((s) => s.setInitData);
+  const setDevTgId = useScanner((s) => s.setDevTgId);
   const bootstrap = useScanner((s) => s.bootstrap);
   const ready = useScanner((s) => s.ready);
   const initData = useScanner((s) => s.initData);
   const devTgId = useScanner((s) => s.devTgId);
 
+
   useEffect(() => {
-    // pull initData from Telegram WebApp if present
-    if (typeof window !== "undefined") {
+    // telegram-web-app.js is loaded async, so poll until Telegram.WebApp
+    // exposes initData (or give up after ~5s and fall back to devTgId).
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    let tries = 0;
+    const poll = () => {
+      if (cancelled) return;
       const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initData && tg.initData !== initData) {
+      if (tg?.initData && tg.initData.length > 0) {
+        try { tg.ready?.(); tg.expand?.(); } catch { /* noop */ }
         setInit(tg.initData);
+        return;
       }
-      try { tg?.ready?.(); tg?.expand?.(); } catch { /* noop */ }
-    }
-  }, []);
+      if (tg && tries > 4) {
+        // WebApp object exists but initData empty (opened outside a bot, or
+        // Telegram Desktop preview). Fall back to initDataUnsafe.user.id so
+        // the user can still use the app.
+        try { tg.ready?.(); tg.expand?.(); } catch { /* noop */ }
+        const uid = tg.initDataUnsafe?.user?.id;
+        if (uid) setDevTgId(Number(uid));
+        return;
+      }
+      if (tries++ < 20) setTimeout(poll, 250);
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [setInit, setDevTgId]);
+
 
   useEffect(() => {
     if (!ready && (initData || devTgId)) {
@@ -190,6 +211,7 @@ export function useTelegramBootstrap() {
     }
   }, [initData, devTgId, ready, bootstrap]);
 }
+
 
 // ---- selectors / helpers ----
 
