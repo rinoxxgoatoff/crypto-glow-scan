@@ -128,18 +128,18 @@ export function ContactSheet({ open, onOpenChange }: ContactSheetProps) {
       <SheetContent side="bottom" className="rounded-t-3xl border-t-mint">
         <SheetHeader className="text-center">
           <div className="mx-auto mb-2 text-4xl">✅</div>
-          <SheetTitle className="text-center text-lg">Paiement envoyé ?</SheetTitle>
+          <SheetTitle className="text-center text-lg">Payment Confirmed?</SheetTitle>
           <SheetDescription className="text-center text-xs">
-            Pour débloquer votre mineur, envoyez un message à{" "}
-            <b style={{ color: "var(--mint)" }}>@rinoxx11</b> sur Telegram avec une capture
-            d'écran de votre transaction.
+            To unlock your miner, send a message to{" "}
+            <b style={{ color: "var(--mint)" }}>@rinoxx11</b> on Telegram with a screenshot
+            of your transaction.
           </SheetDescription>
         </SheetHeader>
 
         <ul className="mt-4 space-y-2 rounded-xl bg-surface-2 p-3 text-xs leading-relaxed text-muted-foreground">
-          <li>📸 Joignez une capture d'écran de la transaction</li>
-          <li>✉️ Envoyez-la à <b style={{ color: "var(--mint)" }}>@rinoxx11</b> sur Telegram</li>
-          <li>⚡ Activation sous 10 minutes après vérification</li>
+          <li>📸 Attach a screenshot of your transaction</li>
+          <li>✉️ Send it to <b style={{ color: "var(--mint)" }}>@rinoxx11</b> on Telegram</li>
+          <li>⚡ Activation within 10 minutes after verification</li>
         </ul>
 
         <a
@@ -152,7 +152,7 @@ export function ContactSheet({ open, onOpenChange }: ContactSheetProps) {
             color: "var(--primary-foreground)",
           }}
         >
-          <Send className="h-4 w-4" /> Contacter @rinoxx11
+          <Send className="h-4 w-4" /> Contact @rinoxx11
         </a>
       </SheetContent>
     </Sheet>
