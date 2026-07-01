@@ -174,15 +174,29 @@ export function useTelegramBootstrap() {
   const devTgId = useScanner((s) => s.devTgId);
 
   useEffect(() => {
-    // pull initData from Telegram WebApp if present
-    if (typeof window !== "undefined") {
+    // telegram-web-app.js is loaded async, so poll until Telegram.WebApp
+    // exposes initData (or give up after ~5s and fall back to devTgId).
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    let tries = 0;
+    const poll = () => {
+      if (cancelled) return;
       const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initData && tg.initData !== initData) {
+      if (tg?.initData && tg.initData.length > 0) {
+        try { tg.ready?.(); tg.expand?.(); } catch { /* noop */ }
         setInit(tg.initData);
+        return;
       }
-      try { tg?.ready?.(); tg?.expand?.(); } catch { /* noop */ }
-    }
-  }, []);
+      if (tg && tries > 4) {
+        // WebApp object exists but initData empty → app was opened outside a bot.
+        try { tg.ready?.(); tg.expand?.(); } catch { /* noop */ }
+        return;
+      }
+      if (tries++ < 20) setTimeout(poll, 250);
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [setInit]);
 
   useEffect(() => {
     if (!ready && (initData || devTgId)) {
@@ -190,6 +204,7 @@ export function useTelegramBootstrap() {
     }
   }, [initData, devTgId, ready, bootstrap]);
 }
+
 
 // ---- selectors / helpers ----
 
