@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { BoostButton } from "@/components/scanner/BoostButton";
+
 import { DailyBonus } from "@/components/scanner/DailyBonus";
 import { ScannerTerminal } from "@/components/scanner/ScannerTerminal";
 import { TokenList } from "@/components/scanner/TokenList";
@@ -54,7 +54,7 @@ function HomePage() {
   return (
     <div className="flex flex-col gap-3 pb-3">
       <DailyBonus />
-      <BoostButton />
+
       <ScannerTerminal mining={mining} lines={lines} hashRate={hashRate} base={base} onToggle={toggle} />
       <TokenList withWithdraw onWithdraw={onWithdraw} />
 
